@@ -4,8 +4,9 @@ import android.content.Context
 import android.graphics.drawable.Drawable
 import android.text.InputFilter
 import android.text.InputType
-import androidx.appcompat.app.AppCompatActivity
+import android.widget.EditText
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentManager
 import com.google.android.material.textfield.TextInputLayout
 import me.ibrahimsn.lib.Constants.CHAR_DASH
 import me.ibrahimsn.lib.Constants.CHAR_PLUS
@@ -21,26 +22,20 @@ import java.util.*
 class PhoneNumberKit(private val context: Context) {
 
     private val core = Core(context)
-
-    private var input: TextInputLayout? = null
-
+    private var input: EditText? = null
+    private var textInputLayout: TextInputLayout? = null
     private var country: Country? = null
-
     private var format: String = ""
-
     private var hasManualCountry = false
-
     private var rawInput: CharSequence?
-        get() = input?.editText?.text
+        get() = input?.text
         set(value) {
             input?.tag = Constants.VIEW_TAG
-            input?.editText?.clear()
-            input?.editText?.append(value)
+            input?.clear()
+            input?.append(value)
             input?.tag = null
         }
-
     val isValid: Boolean get() = validate(rawInput)
-
     private val textWatcher = object : PhoneNumberTextWatcher() {
         override fun onTextChanged(text: CharSequence?, start: Int, before: Int, count: Int) {
             if (input?.tag != Constants.VIEW_TAG) {
@@ -101,7 +96,7 @@ class PhoneNumberKit(private val context: Context) {
 
             // Setup country icon
             getFlagIcon(country.iso2)?.let { icon ->
-                input?.startIconDrawable = icon
+                textInputLayout?.startIconDrawable = icon
             }
 
             // Set text length limit according to the example phone number
@@ -119,7 +114,7 @@ class PhoneNumberKit(private val context: Context) {
             }
 
             core.formatPhoneNumber(core.getExampleNumber(country.iso2))?.let { number ->
-                input?.editText?.filters = arrayOf(InputFilter.LengthFilter(number.length))
+                input?.filters = arrayOf(InputFilter.LengthFilter(number.length))
                 format = createNumberFormat(number)
                 applyFormat()
             }
@@ -128,7 +123,8 @@ class PhoneNumberKit(private val context: Context) {
 
     fun updateCountry(countryIso2: String) {
         setCountry(
-            country = getCountry(countryIso2.trim().toLowerCase(Locale.ENGLISH)) ?: Countries.list[0],
+            country = getCountry(countryIso2.trim().toLowerCase(Locale.ENGLISH))
+                ?: Countries.list[0],
             prefill = true
         )
     }
@@ -140,40 +136,35 @@ class PhoneNumberKit(private val context: Context) {
         return format
     }
 
-    /**
-     * Attaches to textInputLayout
-     */
-    fun attachToInput(input: TextInputLayout, defaultCountry: Int) {
-        this.input = input
-        input.editText?.inputType = InputType.TYPE_CLASS_PHONE
-        input.editText?.addTextChangedListener(textWatcher)
+    fun attachToInput(textInputLayout: TextInputLayout, defaultCountry: Int) {
+        setupInput(textInputLayout.editText, textInputLayout, getCountry(defaultCountry))
+    }
 
-        input.isStartIconVisible = true
-        input.isStartIconCheckable = true
-        input.setStartIconTintList(null)
-
-        // Set initial country
-        setCountry(
-            country = getCountry(defaultCountry) ?: Countries.list[0],
-            prefill = true
+    fun attachToInput(textInputLayout: TextInputLayout, countryIso2: String) {
+        setupInput(
+            textInputLayout.editText,
+            textInputLayout,
+            getCountry(countryIso2.trim().toLowerCase(Locale.ENGLISH))
         )
     }
 
-    /**
-     * Attaches to textInputLayout
-     */
-    fun attachToInput(input: TextInputLayout, countryIso2: String) {
-        this.input = input
-        input.editText?.inputType = InputType.TYPE_CLASS_PHONE
-        input.editText?.addTextChangedListener(textWatcher)
+    fun attachToInput(input: EditText, defaultCountry: Int) {
+        setupInput(input, null, getCountry(defaultCountry))
+    }
 
-        input.isStartIconVisible = true
-        input.isStartIconCheckable = true
-        input.setStartIconTintList(null)
+    private fun setupInput(input: EditText?, textInputLayout: TextInputLayout?, country: Country?) {
+        this.textInputLayout = textInputLayout
+        this.input = input
+        this.input?.inputType = InputType.TYPE_CLASS_PHONE
+        this.input?.addTextChangedListener(textWatcher)
+
+        this.textInputLayout?.isStartIconVisible = true
+        this.textInputLayout?.isStartIconCheckable = true
+        this.textInputLayout?.setStartIconTintList(null)
 
         // Set initial country
         setCountry(
-            country = getCountry(countryIso2.trim().toLowerCase(Locale.ENGLISH)) ?: Countries.list[0],
+            country = country ?: Countries.list[0],
             prefill = true
         )
     }
@@ -182,21 +173,29 @@ class PhoneNumberKit(private val context: Context) {
      * Sets up country code picker bottomSheet
      */
     fun setupCountryPicker(
-        activity: AppCompatActivity,
+        fragmentManager: FragmentManager,
         itemLayout: Int = R.layout.item_country_picker,
         searchEnabled: Boolean = false
     ) {
-        input?.setStartIconOnClickListener {
-            CountryPickerBottomSheet.newInstance().apply {
-                setup(itemLayout, searchEnabled)
-                onCountrySelectedListener = { country ->
-                    setCountry(country, true)
-                }
-                show(
-                    activity.supportFragmentManager,
-                    CountryPickerBottomSheet.TAG
-                )
+        textInputLayout?.setStartIconOnClickListener {
+            showCountryPicker(fragmentManager, itemLayout, searchEnabled)
+        }
+    }
+
+    fun showCountryPicker(
+        fragmentManager: FragmentManager,
+        itemLayout: Int = R.layout.item_country_picker,
+        searchEnabled: Boolean = false
+    ) {
+        CountryPickerBottomSheet.newInstance().apply {
+            setup(itemLayout, searchEnabled)
+            onCountrySelectedListener = { country ->
+                setCountry(country, true)
             }
+            show(
+                fragmentManager,
+                CountryPickerBottomSheet.TAG
+            )
         }
     }
 

@@ -1,7 +1,7 @@
 package me.ibrahimsn.phonenumberkit
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
 import me.ibrahimsn.lib.PhoneNumberKit
 
@@ -11,13 +11,15 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         val phoneNumberKit = PhoneNumberKit(this)
+        val phoneNumberKit2 = PhoneNumberKit(this)
 
         // To attach an editTextLayout
         phoneNumberKit.attachToInput(textField, 971)
+        phoneNumberKit2.attachToInput(editText, 971)
 
         // Setup country code picker optionally
         phoneNumberKit.setupCountryPicker(
-            activity = this,
+            fragmentManager = supportFragmentManager,
             searchEnabled = true
         )
 
