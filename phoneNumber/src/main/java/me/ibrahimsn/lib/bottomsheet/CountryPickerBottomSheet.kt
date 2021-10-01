@@ -5,11 +5,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.LayoutRes
+import androidx.appcompat.widget.AppCompatImageView
 import androidx.appcompat.widget.SearchView
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import kotlinx.android.synthetic.main.bottom_sheet_country_picker.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,16 +24,14 @@ import java.util.*
 class CountryPickerBottomSheet : BottomSheetDialogFragment() {
 
     private val supervisorJob = SupervisorJob()
-
     private val scope = CoroutineScope(supervisorJob + Dispatchers.IO)
-
     private var itemAdapter: CountryAdapter? = null
-
     private val countries = Countries.list
-
     private var isSearchEnabled: Boolean = false
-
     var onCountrySelectedListener: ((Country?) -> Unit)? = null
+    private val vInput get() = requireView().findViewById<SearchView>(R.id.searchView)
+    private val vList get() = requireView().findViewById<RecyclerView>(R.id.recyclerView)
+    private val vClose get() = requireView().findViewById<AppCompatImageView>(R.id.imageButtonClose)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,16 +52,16 @@ class CountryPickerBottomSheet : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        searchView.showIf(isSearchEnabled)
-        recyclerView.apply {
+        vInput.showIf(isSearchEnabled)
+        vList.apply {
             addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
             layoutManager = LinearLayoutManager(context)
             adapter = itemAdapter
         }
-        imageButtonClose.setOnClickListener {
+        vClose.setOnClickListener {
             dismiss()
         }
-        searchView.setOnQueryTextListener(object: SearchView.OnQueryTextListener {
+        vInput.setOnQueryTextListener(object: SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 return true
             }
@@ -92,7 +91,7 @@ class CountryPickerBottomSheet : BottomSheetDialogFragment() {
                     it.countryCode.toString().startsWith(query) ||
                             it.name.toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))
                 }
-                recyclerView.post {
+                vList.post {
                     itemAdapter?.setup(filtered)
                 }
             }
